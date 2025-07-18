@@ -19,32 +19,33 @@ jobs:
 
     - name: Prepare container rootfs
       run: |
-        mkdir -p chroot
-        curl -L -o rootfs.tar.xz https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz
-        sudo tar -xJf rootfs.tar.xz -C chroot
+        mkdir -p /opt/chroot
+        curl -L -o /opt/chroot/rootfs.tar.xz https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz
+        mkdir -p /opt/chroot/rootfs
+        sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
         rm rootfs.tar.xz
 
     - name: Set up chroot environment
       run: |
-        sudo mkdir -p /chroot/src
-        sudo cp -r . /chroot/src
+        sudo mkdir -p /opt/chroot/rootfs/src
+        sudo cp -r . /opt/chroot/rootfs/src
         echo "Mounting system directories..."
         for dir in proc sys dev dev/pts; do
-          sudo mkdir -p /chroot/$dir
-          sudo mount --bind /$dir /chroot/$dir
+          sudo mkdir -p /opt/chroot/rootfs/$dir
+          sudo mount --bind /$dir /opt/chroot/rootfs/$dir
         done
 
         echo "Copying qemu-arm-static into chroot..."
-        sudo cp /usr/bin/qemu-arm-static /chroot/usr/bin/
-        sudo rm /chroot/etc/resolv.conf
-        sudo touch /chroot/etc/resolv.conf
-        echo "nameserver 1.1.1.1" | sudo tee /chroot/etc/resolv.conf
-        echo "nameserver 8.8.8.8" | sudo tee -a /chroot/etc/resolv.conf
+        sudo cp /usr/bin/qemu-arm-static /opt/chroot/rootfs/usr/bin/
+        sudo rm /opt/chroot/rootfs/etc/resolv.conf
+        sudo touch /opt/chroot/rootfs/etc/resolv.conf
+        echo "nameserver 1.1.1.1" | sudo tee /opt/chroot/rootfs/etc/resolv.conf
+        echo "nameserver 8.8.8.8" | sudo tee -a /opt/chroot/rootfs/etc/resolv.conf
         
 
     - name: Build gc and libusbgx inside chroot
       run: |
-        sudo chroot chroot /bin/bash -c "
+        sudo chroot /opt/chroot/rootfs /bin/bash -c "
           apt update
           DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config
           # Build libusbgx
@@ -56,7 +57,7 @@ jobs:
           mkdir -p /artifacts
           cp .libs/libusbgx.so /artifacts
           # Build gc
-          cd /src
+          cd src
           make
           cp gc /artifacts
         "
