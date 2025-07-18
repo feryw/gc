@@ -23,7 +23,7 @@ jobs:
         curl -L -o /opt/chroot/rootfs.tar.xz https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz
         mkdir -p /opt/chroot/rootfs
         sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
-        rm rootfs.tar.xz
+        rm /opt/chroot/rootfs.tar.xz
 
     - name: Set up chroot environment
       run: |
