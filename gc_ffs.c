@@ -24,7 +24,7 @@ int gc_ffs_create(int argc,char *argv[],gc_generic_info info)
     usbg_function *f_ffs;
     int usbg_ret;
 
-    char *id = gc_generate_id(USBG_F_FFS);
+    char *id = "adb";
 
     if(id == NULL)
         return GC_FAILED;
