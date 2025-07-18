@@ -1,0 +1,72 @@
+name: Build gc and libusbgx in chroot and release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger only on version tags like v1.0
+
+jobs:
+  build-chroot:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y wget tar xz-utils qemu-user-static
+
+    - name: Download Debian Bookworm armhf rootfs
+      run: |
+        mkdir -p chroot
+        wget https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz -O rootfs.tar.xz
+        sudo tar -xJf rootfs.tar.xz -C chroot
+
+    - name: Set up chroot environment
+      run: |
+        sudo cp /etc/resolv.conf chroot/etc/
+        sudo cp /usr/bin/qemu-arm-static chroot/usr/bin/
+        sudo mount -t proc /proc chroot/proc
+        sudo mount --rbind /sys chroot/sys
+        sudo mount --rbind /dev chroot/dev
+
+    - name: Build gc and libusbgx inside chroot
+      run: |
+        sudo chroot chroot /bin/bash -c "
+          apt update &&
+          apt install -y build-essential git autoconf automake libtool pkg-config &&
+          # Build libusbgx
+          git clone https://github.com/linux-usb-gadgets/libusbgx.git /libusbgx &&
+          cd /libusbgx &&
+          ./autogen.sh &&
+          ./configure &&
+          make &&
+          cp .libs/libusbgx.so / &&
+          # Build gc
+          git clone https://github.com/feryw/gc.git /gc &&
+          cd /gc &&
+          make &&
+          cp gc / "
+          
+    - name: Copy build artifacts from chroot
+      run: |
+        cp chroot/gc ./gc
+        cp chroot/libusbgx.so ./libusbgx.so
+
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        name: "Release ${{ github.ref_name }}"
+        files: |
+          ./gc
+          ./libusbgx.so
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Cleanup chroot
+      run: |
+        sudo umount -l chroot/proc || true
+        sudo umount -l chroot/sys || true
+        sudo umount -l chroot/dev || true
