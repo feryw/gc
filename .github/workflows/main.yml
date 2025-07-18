@@ -47,7 +47,8 @@ jobs:
       run: |
         sudo chroot /opt/chroot/rootfs /bin/bash -c "
           apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config libconfig-dev cmake
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config libconfig-dev cmake binutils patchelf python3-pyelftools scons
+          pip3 install staticx
           git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
           git checkout 060784424609d5a4e3bce8355f788c93f09802a5
@@ -55,20 +56,20 @@ jobs:
           ./configure
           make
           make install
-          find . -name "libusbgx.so*"
-          mkdir -p /artifacts
-          cp src/.libs/libusbgx.so* /artifacts
+          mkdir -p /artifacts/prebin
+          mkdir -p /artifacts/bin
           mkdir -p /opt/chroot/rootfs/gc/build
           cd /opt/chroot/rootfs/gc/build
           cmake ..
           make
-          cp gc /artifacts
+          find . -name gc
+          cp gc /artifacts/prebin
+          staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
         "
           
     - name: Copy build artifacts from chroot
       run: |
-        cp /opt/chroot/rootfs/artifacts/gc .
-        cp /opt/chroot/rootfs/artifacts/libusbgx.so* .
+        cp /opt/chroot/rootfs/artifacts/bin/gc .
 
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
@@ -76,6 +77,5 @@ jobs:
         name: "Release ${{ github.ref_name }}"
         files: |
           ./gc
-          ./libusbgx.so*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
