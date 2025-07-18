@@ -1,9 +1,8 @@
 name: Build gc and libusbgx in chroot and release
 
 on:
-  push:
-    tags:
-      - 'v*'  # Trigger only on version tags like v1.0
+  repository_dispatch:
+  workflow_dispatch:
 
 jobs:
   build-chroot:
