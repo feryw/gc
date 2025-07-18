@@ -27,8 +27,8 @@ jobs:
 
     - name: Set up chroot environment
       run: |
-        sudo mkdir -p /opt/chroot/rootfs/src
-        sudo cp -r . /opt/chroot/rootfs/src
+        sudo mkdir -p /opt/chroot/rootfs/gc
+        sudo cp -r . /opt/chroot/rootfs/gc
         echo "Mounting system directories..."
         for dir in proc sys dev dev/pts; do
           sudo mkdir -p /opt/chroot/rootfs/$dir
@@ -58,8 +58,8 @@ jobs:
           find . -name "libusbgx.so*"
           mkdir -p /artifacts
           cp src/.libs/libusbgx.so* /artifacts
-          mkdir -p src/build
-          cd src/build
+          mkdir -p /opt/chroot/rootfs/gc/build
+          cd /opt/chroot/rootfs/gc/build
           cmake ..
           make
           cp gc /artifacts
