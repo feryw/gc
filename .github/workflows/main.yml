@@ -55,9 +55,9 @@ jobs:
           ./configure
           make
           make install
-          find
+          find . -name "libusbgx.so*"
           mkdir -p /artifacts
-          cp .libs/libusbgx.so /artifacts
+          cp src/.libs/libusbgx.so* /artifacts
           mkdir -p src/build
           cd src/build
           cmake ..
@@ -68,7 +68,7 @@ jobs:
     - name: Copy build artifacts from chroot
       run: |
         cp /opt/chroot/rootfs/artifacts/gc .
-        cp /opt/chroot/rootfs/artifacts/libusbgx.so .
+        cp /opt/chroot/rootfs/artifacts/libusbgx.so* .
 
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
@@ -76,6 +76,6 @@ jobs:
         name: "Release ${{ github.ref_name }}"
         files: |
           ./gc
-          ./libusbgx.so
+          ./libusbgx.so*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
