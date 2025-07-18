@@ -68,7 +68,7 @@ jobs:
           
     - name: Copy build artifacts from chroot
       run: |
-        cp /opt/chroot/rootfs/artifacts/bin/gc .
+        sudo cp /opt/chroot/rootfs/artifacts/bin/gc .
 
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
