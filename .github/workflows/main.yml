@@ -12,47 +12,59 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install dependencies
+    - name: Install runner dependencies
       run: |
         sudo apt update
-        sudo apt install -y wget tar xz-utils qemu-user-static
+        sudo apt install -y qemu-user-static binfmt-support jq curl xz-utils grep coreutils
 
-    - name: Download Debian Bookworm armhf rootfs
+    - name: Prepare container rootfs
       run: |
         mkdir -p chroot
-        wget https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz -O rootfs.tar.xz
+        curl -L https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz
         sudo tar -xJf rootfs.tar.xz -C chroot
+        rm rootfs.tar.xz
 
     - name: Set up chroot environment
       run: |
-        sudo cp /etc/resolv.conf chroot/etc/
-        sudo cp /usr/bin/qemu-arm-static chroot/usr/bin/
-        sudo mount -t proc /proc chroot/proc
-        sudo mount --rbind /sys chroot/sys
-        sudo mount --rbind /dev chroot/dev
+        sudo mkdir -p /chroot/src
+        sudo cp -r . /chroot/src
+        echo "Mounting system directories..."
+        for dir in proc sys dev dev/pts; do
+          sudo mkdir -p /chroot/$dir
+          sudo mount --bind /$dir /chroot/$dir
+        done
+
+        echo "Copying qemu-arm-static into chroot..."
+        sudo cp /usr/bin/qemu-arm-static /chroot/usr/bin/
+        sudo rm /chroot/etc/resolv.conf
+        sudo touch /chroot/etc/resolv.conf
+        echo "nameserver 1.1.1.1" | sudo tee /chroot/etc/resolv.conf
+        echo "nameserver 8.8.8.8" | sudo tee -a /chroot/etc/resolv.conf
+        
 
     - name: Build gc and libusbgx inside chroot
       run: |
         sudo chroot chroot /bin/bash -c "
-          apt update &&
-          apt install -y build-essential git autoconf automake libtool pkg-config &&
+          apt update
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config
           # Build libusbgx
-          git clone https://github.com/linux-usb-gadgets/libusbgx.git /libusbgx &&
-          cd /libusbgx &&
-          ./autogen.sh &&
-          ./configure &&
-          make &&
-          cp .libs/libusbgx.so / &&
+          git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
+          cd /libusbgx
+          ./autogen.sh
+          ./configure
+          make
+          mkdir -p /artifacts
+          cp .libs/libusbgx.so /artifacts
           # Build gc
-          git clone https://github.com/feryw/gc.git /gc &&
-          cd /gc &&
-          make &&
-          cp gc / "
+          cd /src
+          make
+          cp gc /artifacts
+        "
           
     - name: Copy build artifacts from chroot
       run: |
-        cp chroot/gc ./gc
-        cp chroot/libusbgx.so ./libusbgx.so
+        cp chroot/artifacts/gc ./gc
+        cp chroot/artifacts/libusbgx.so ./libusbgx.so
 
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
