@@ -20,7 +20,7 @@ jobs:
     - name: Prepare container rootfs
       run: |
         mkdir -p chroot
-        curl -L https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz
+        curl -L -o rootfs.tar.xz https://images.linuxcontainers.org/images/debian/bookworm/armhf/default/20250715_05:24/rootfs.tar.xz
         sudo tar -xJf rootfs.tar.xz -C chroot
         rm rootfs.tar.xz
 
