@@ -47,25 +47,28 @@ jobs:
       run: |
         sudo chroot /opt/chroot/rootfs /bin/bash -c "
           apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config
-          # Build libusbgx
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config libconfig-dev cmake
           git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
-          ./autogen.sh
+          git checkout 060784424609d5a4e3bce8355f788c93f09802a5
+          autoreconf -i
           ./configure
           make
+          make install
+          find
           mkdir -p /artifacts
           cp .libs/libusbgx.so /artifacts
-          # Build gc
-          cd src
+          mkdir -p src/build
+          cd src/build
+          cmake ..
           make
           cp gc /artifacts
         "
           
     - name: Copy build artifacts from chroot
       run: |
-        cp chroot/artifacts/gc ./gc
-        cp chroot/artifacts/libusbgx.so ./libusbgx.so
+        cp /opt/chroot/rootfs/artifacts/gc .
+        cp /opt/chroot/rootfs/artifacts/libusbgx.so .
 
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
@@ -76,9 +79,3 @@ jobs:
           ./libusbgx.so
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Cleanup chroot
-      run: |
-        sudo umount -l chroot/proc || true
-        sudo umount -l chroot/sys || true
-        sudo umount -l chroot/dev || true
