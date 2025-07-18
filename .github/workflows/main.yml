@@ -24,9 +24,8 @@ jobs:
         mkdir -p /opt/chroot/rootfs
         sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
         rm /opt/chroot/rootfs.tar.xz
-
-    - name: Set up chroot environment
-      run: |
+        pwd
+        ls -al
         sudo mkdir -p /opt/chroot/rootfs/gc
         sudo cp -r . /opt/chroot/rootfs/gc
         echo "Mounting system directories..."
