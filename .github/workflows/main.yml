@@ -47,7 +47,7 @@ jobs:
       run: |
         sudo chroot /opt/chroot/rootfs /bin/bash -c "
           apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config libconfig-dev cmake binutils patchelf python3-pyelftools scons
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config libconfig-dev cmake binutils patchelf python3-pip python3-pyelftools scons
           pip3 install staticx
           git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
