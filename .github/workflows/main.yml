@@ -24,8 +24,6 @@ jobs:
         mkdir -p /opt/chroot/rootfs
         sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
         rm /opt/chroot/rootfs.tar.xz
-        pwd
-        ls -al
         sudo mkdir -p /opt/chroot/rootfs/gc
         sudo cp -r . /opt/chroot/rootfs/gc
         echo "Mounting system directories..."
@@ -58,14 +56,11 @@ jobs:
           mkdir -p /artifacts/prebin
           mkdir -p /artifacts/bin
           mkdir -p /gc/build
-          ls -al /
-          ls -al /gc
-          find / -name "CMakeLists.txt"
           cd /gc/build
           cmake ..
           make
-          find ../ -name gc
-          cp gc /artifacts/prebin
+          file `find / -name gc`
+          cp `find / -name gc` /artifacts/prebin
           staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
         "
