@@ -57,21 +57,22 @@ jobs:
           make install
           mkdir -p /artifacts/prebin
           mkdir -p /artifacts/bin
-          ls -al /opt/chroot/rootfs
-          find /opt/chroot/rootfs/gc/ -name "CMakeLists.txt"
-          mkdir -p /opt/chroot/rootfs/gc/build
-          cd /opt/chroot/rootfs/gc/build
+          mkdir -p /gc/build
+          ls -al /
+          ls -al /gc
+          find / -name "CMakeLists.txt"
+          cd /gc/build
           cmake ..
           make
-          find . -name gc
+          find ../ -name gc
           cp gc /artifacts/prebin
           staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
+          chmod 644 /artifacts/bin/gc
         "
           
     - name: Copy build artifacts from chroot
       run: |
-        chmod r+x /opt/chroot/rootfs/artifacts/bin/gc
-        sudo cp /opt/chroot/rootfs/artifacts/bin/gc .
+        cp /opt/chroot/rootfs/artifacts/bin/gc .
 
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
