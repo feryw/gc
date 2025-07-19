@@ -63,17 +63,18 @@ jobs:
           cp /gc/bin/gc /artifacts/prebin
           staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
+          find /artifacts
         "
           
     - name: Copy build artifacts from chroot
       run: |
         cp /opt/chroot/rootfs/artifacts/bin/gc .
 
-    - name: Upload Release Assets
-      uses: softprops/action-gh-release@v1
+    - name: Upload Release
+      uses: ncipollo/release-action@v1
       with:
         name: "Release ${{ github.ref_name }}"
-        files: |
-          ./gc
+        artifacts: ./gc
+        body: "✅ gc static armv7/armhf binaries only"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
