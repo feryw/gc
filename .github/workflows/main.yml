@@ -53,16 +53,14 @@ jobs:
           ./configure
           make
           make install
-          echo "do ldconfig"
-          LD_LIBRARY_PATH=/usr/local/lib ldconfig
+          ldconfig -n /usr/local/lib
           mkdir -p /artifacts/prebin
           mkdir -p /artifacts/bin
           mkdir -p /gc/build
           cd /gc/build
           cmake ..
           make
-          "echo ldd gc"
-          LD_LIBRARY_PATH=/usr/local/lib ldd /gc/bin/gc
+          LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib" ldd /gc/bin/gc
           cp /gc/bin/gc /artifacts/prebin
           staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
