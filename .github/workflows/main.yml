@@ -61,9 +61,9 @@ jobs:
           cmake ..
           make
           cp /gc/bin/gc /artifacts/prebin 
-          cp /usr/local/lib/libusbgx.so.2.0.0 /artifacts/prebin
+          cp /usr/local/lib/libusbgx.so.2.0.0 /artifacts/prebin/libusbgx.so.2
           ldconfig -n /artifacts/prebin
-          staticx -l /artifacts/prebin/libusbgx.so.2 --strip /artifacts/prebin/gc /artifacts/bin/gc
+          staticx -l /artifacts/prebin/libusbgx.so.2 --strip --debug /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
           find /artifacts
         "
