@@ -55,12 +55,11 @@ jobs:
           make install
           mkdir -p /artifacts/prebin
           mkdir -p /artifacts/bin
+          cp /libusbgx/src/.libs/libusbgx.so.2.0.0 /artifacts/prebin/libusbgx.so.2
           mkdir -p /gc/build
           cd /gc/build
           cmake ..
           make
-          find /libusbgx -name "libusbgx.so*"
-          find /gc -name gc
           cp /gc/bin/gc /artifacts/prebin
           staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
