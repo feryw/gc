@@ -59,6 +59,7 @@ jobs:
           cd /gc/build
           cmake ..
           make
+          find /libusbgx -name "libusbgx.so*"
           find /gc -name gc
           cp /gc/bin/gc /artifacts/prebin
           staticx --strip /artifacts/prebin/gc /artifacts/bin/gc
