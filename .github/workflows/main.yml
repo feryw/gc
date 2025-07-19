@@ -1,4 +1,4 @@
-name: Build gc and libusbgx in chroot and release
+name: Build gc
 
 on:
   repository_dispatch:
@@ -57,6 +57,7 @@ jobs:
           make install
           mkdir -p /artifacts/prebin
           mkdir -p /artifacts/bin
+          ls -al /opt/chroot/rootfs
           find /opt/chroot/rootfs/gc/ -name "CMakeLists.txt"
           mkdir -p /opt/chroot/rootfs/gc/build
           cd /opt/chroot/rootfs/gc/build
