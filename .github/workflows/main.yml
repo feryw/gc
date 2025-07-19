@@ -62,7 +62,7 @@ jobs:
           cmake ..
           make
           cp /gc/bin/gc /artifacts/prebin 
-          staticx -l /lib/arm-linux-gnueabihf/libusbgx.so.2 --strip --debug /artifacts/prebin/gc /artifacts/bin/gc
+          staticx -l /lib/arm-linux-gnueabihf/libusbgx.so.2 --strip /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
         "
           
