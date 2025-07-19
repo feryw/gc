@@ -53,19 +53,17 @@ jobs:
           ./configure
           make
           make install
-          ldconfig -n /usr/local/lib
-          mkdir -p /artifacts/prebin
-          mkdir -p /artifacts/bin
-          mkdir -p /gc/build
+          cp /usr/local/lib/libusbgx.so.2.0.0 /lib/arm-linux-gnueabihf
+          ln -sf /lib/arm-linux-gnueabihf/libusbgx.so.2.0.0 /lib/arm-linux-gnueabihf/libusbgx.so.2
+          ln -sf /lib/arm-linux-gnueabihf/libusbgx.so.2.0.0 /lib/arm-linux-gnueabihf/libusbgx.so
+          ldconfig
+          mkdir -p /artifacts/prebin /artifacts/bin /gc/build
           cd /gc/build
           cmake ..
           make
           cp /gc/bin/gc /artifacts/prebin 
-          cp /usr/local/lib/libusbgx.so.2.0.0 /artifacts/prebin/libusbgx.so.2
-          ldconfig -n /artifacts/prebin
-          staticx -l /artifacts/prebin/libusbgx.so.2 --strip --debug /artifacts/prebin/gc /artifacts/bin/gc
+          staticx -l /lib/arm-linux-gnueabihf/libusbgx.so.2 --strip --debug /artifacts/prebin/gc /artifacts/bin/gc
           chmod 644 /artifacts/bin/gc
-          find /artifacts
         "
           
     - name: Copy build artifacts from chroot
