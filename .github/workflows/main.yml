@@ -1,4 +1,4 @@
-name: Build gc
+name: Build static gc
 
 on:
   repository_dispatch:
