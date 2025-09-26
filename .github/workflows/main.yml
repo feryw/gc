@@ -1,97 +1,59 @@
-name: Build gc (static)
+name: Build Static GC
 
 on:
   repository_dispatch:
   workflow_dispatch:
-  
+
 jobs:
-  build-chroot:
+  build:
     runs-on: ubuntu-22.04
 
+    strategy:
+      matrix:
+        arch: [armv5, armv6, armv7, armhf]
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Install runner dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y qemu-user-static binfmt-support jq curl xz-utils grep coreutils
+      - name: Install cross toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            make cmake pkg-config autoconf automake libtool git
 
-    - name: Prepare container rootfs
-      run: |
-        mkdir -p /opt/chroot
-        curl -L -o /opt/chroot/rootfs.tar.xz https://images.linuxcontainers.org/images/ubuntu/jammy/armhf/default/20250925_07:42/rootfs.tar.xz
-        mkdir -p /opt/chroot/rootfs
-        sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
-        rm /opt/chroot/rootfs.tar.xz
-        sudo mkdir -p /opt/chroot/rootfs/gc
-        sudo cp -r . /opt/chroot/rootfs/gc
-        echo "Mounting system directories..."
-        for dir in proc sys dev dev/pts; do
-          sudo mkdir -p /opt/chroot/rootfs/$dir
-          sudo mount --bind /$dir /opt/chroot/rootfs/$dir
-        done
+      - name: Build libconfig static
+        run: |
+          git clone https://github.com/hyperrealm/libconfig.git
+          cd libconfig
+          ./autogen.sh || true
+          ./configure --host=arm-linux-gnueabihf --enable-static --disable-shared \
+            CC=arm-linux-gnueabihf-gcc
+          make -j$(nproc)
+          sudo make install DESTDIR=/tmp/sysroot
 
-        echo "Copying qemu-arm-static into chroot..."
-        sudo cp /usr/bin/qemu-arm-static /opt/chroot/rootfs/usr/bin/
-        sudo rm /opt/chroot/rootfs/etc/resolv.conf
-        sudo touch /opt/chroot/rootfs/etc/resolv.conf
-        echo "nameserver 1.1.1.1" | sudo tee /opt/chroot/rootfs/etc/resolv.conf
-        echo "nameserver 8.8.8.8" | sudo tee -a /opt/chroot/rootfs/etc/resolv.conf
-        
+      - name: Build libusbgx static
+        run: |
+          git clone https://github.com/libusbgx/libusbgx.git
+          cd libusbgx
+          ./autogen.sh || true
+          ./configure --host=arm-linux-gnueabihf --enable-static --disable-shared \
+            CC=arm-linux-gnueabihf-gcc PKG_CONFIG_PATH=/tmp/sysroot/usr/local/lib/pkgconfig
+          make -j$(nproc)
+          sudo make install DESTDIR=/tmp/sysroot
 
-    - name: Build gc
-      run: |
-        sudo chroot /opt/chroot/rootfs /bin/bash -c "
-          apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev cmake binutils libselinux1 scons
-          git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
-          cd /libusbgx
-          git checkout 060784424609d5a4e3bce8355f788c93f09802a5
-          autoreconf -i
-          ./configure
-          make
-          make install
-          LIBUSBGX_A=/libusbgx/src/.libs/libusbgx.a
-          LIBUSBGX_INCLUDE=/libusbgx/include
-          mkdir -p /artifacts 
-          mkdir -p /gc/build
-          cd /gc/build
+      - name: Build gc (static)
+        run: |
+          mkdir -p build && cd build
           cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLIBUSBGX_STATIC=${LIBUSBGX_A} \
-            -DLIBUSBGX_INCLUDE_DIRS=${LIBUSBGX_INCLUDE} \
-            -DCMAKE_EXE_LINKER_FLAGS='-static'
-          make
-          cp /gc/bin/gc /artifacts
-          chmod 644 /artifacts/gc
-        "
-          
-    - name: Copy build artifacts from chroot
-      run: |
-        cp /opt/chroot/rootfs/artifacts/gc .
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+            -DCMAKE_FIND_ROOT_PATH=/tmp/sysroot/usr/local \
+            -DCMAKE_EXE_LINKER_FLAGS="-static"
+          make -j$(nproc)
 
-    - name: 🆙 Determine next version tag
-      id: version
-      run: |
-        git fetch --tags
-        latest=$(git tag | grep '^v[0-9]\+\.[0-9]\+\.[0-9]\+$' | sort -V | tail -n1)
-        if [ -z "$latest" ]; then
-          next="v1.0.0"
-        else
-          major=$(echo $latest | cut -d. -f1 | tr -d 'v')
-          minor=$(echo $latest | cut -d. -f2)
-          patch=$(echo $latest | cut -d. -f3)
-          next="v${major}.${minor}.$((patch + 1))"
-        fi
-        echo "VERSION_TAG=$next" >> $GITHUB_ENV
-        
-    - name: Upload Release
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: ./gc
-        tag: ${{ env.VERSION_TAG }}
-        name: ${{ env.VERSION_TAG }}
-        body: "✅ gc static armv7/armhf binaries only"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gc-${{ matrix.arch }}-static
+          path: build/bin/gc
