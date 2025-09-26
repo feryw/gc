@@ -51,6 +51,7 @@ jobs:
           autoreconf -i
           ./configure
           make
+          make install
           LIBUSBGX_A=/libusbgx/src/.libs/libusbgx.a
           LIBUSBGX_INCLUDE=/libusbgx/include
           mkdir -p /artifacts 
