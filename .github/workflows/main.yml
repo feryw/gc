@@ -1,4 +1,4 @@
-name: Build gc (static)
+name: Build gc (static) latest 0.2.0 libusbgx
 
 on:
   repository_dispatch:
@@ -47,7 +47,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev cmake binutils libselinux1 scons
           git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
-          git checkout 060784424609d5a4e3bce8355f788c93f09802a5
+          git checkout 2e374d50aa4d65274c89edd3655c45c3632d226a
           autoreconf -i
           ./configure
           make
