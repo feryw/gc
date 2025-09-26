@@ -69,7 +69,7 @@ jobs:
           
     - name: Copy build artifacts from chroot
       run: |
-        cp /opt/chroot/rootfs/artifacts/bin/gc .
+        cp /opt/chroot/rootfs/artifacts/gc .
 
     - name: 🆙 Determine next version tag
       id: version
