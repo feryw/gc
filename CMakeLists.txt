@@ -18,20 +18,24 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
 file(GLOB_RECURSE SOURCES  "main.c" "gc_*.c")
 SET(EXECUTABLE_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/bin)
 
+# Core Dependency: link static libusbgx
+# Adjust path if libusbgx.a is installed elsewhere
+set(LIBUSBGX_STATIC "/usr/local/lib/libusbgx.a")
+set(LIBUSBGX_INCLUDE_DIRS "/usr/local/include")
 
-# Core Dependency
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBUSBGX REQUIRED libusbgx)
-list(APPEND EXTRA_LIBS ${LIBUSBGX_LIBRARIES})
-list(APPEND EXTRA_INCLUDES ${LIBUSBGX_INCLUDE_DIRS})
+include_directories(${LIBUSBGX_INCLUDE_DIRS})
 
 # generated headers
-configure_file (
-        "gc_config.h.in"
-        "${PROJECT_SOURCE_DIR}/gc_config.h"
+configure_file(
+    "gc_config.h.in"
+    "${PROJECT_SOURCE_DIR}/gc_config.h"
 )
 
-include_directories(${EXTRA_INCLUDES} ${INCLUDES})
 add_executable(gc ${SOURCES})
-target_link_libraries(gc PRIVATE ${EXTRA_LIBS})
+target_link_libraries(gc PRIVATE ${LIBUSBGX_STATIC})
+
+# Force fully static binary (glibc + libgcc + libusbgx)
+set_target_properties(gc PROPERTIES LINK_FLAGS "-static -static-libgcc -static-libstdc++")
+
 install(FILES ${PROJECT_SOURCE_DIR}/bin/gc DESTINATION bin)
+
