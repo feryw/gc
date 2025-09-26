@@ -1,0 +1,99 @@
+name: Build gc Static
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  
+jobs:
+  build-chroot:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install host dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y qemu-user-static binfmt-support curl xz-utils build-essential git cmake autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev binutils libselinux1 python3-pip python3-pyelftools scons
+
+    - name: Prepare container rootfs
+      run: |
+        mkdir -p /opt/chroot
+        curl -L -o /opt/chroot/rootfs.tar.xz https://images.linuxcontainers.org/images/ubuntu/jammy/armhf/default/20250715_08:28/rootfs.tar.xz
+        mkdir -p /opt/chroot/rootfs
+        sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
+        rm /opt/chroot/rootfs.tar.xz
+        sudo mkdir -p /opt/chroot/rootfs/gc
+        sudo cp -r . /opt/chroot/rootfs/gc
+        echo "Mounting system directories..."
+        for dir in proc sys dev dev/pts; do
+          sudo mkdir -p /opt/chroot/rootfs/$dir
+          sudo mount --bind /$dir /opt/chroot/rootfs/$dir
+        done
+        sudo cp /usr/bin/qemu-arm-static /opt/chroot/rootfs/usr/bin/
+        sudo rm -f /opt/chroot/rootfs/etc/resolv.conf
+        echo "nameserver 1.1.1.1" | sudo tee /opt/chroot/rootfs/etc/resolv.conf
+        echo "nameserver 8.8.8.8" | sudo tee -a /opt/chroot/rootfs/etc/resolv.conf
+
+    - name: Build gc statically with CMake
+      run: |
+        sudo chroot /opt/chroot/rootfs /bin/bash -c "
+          set -e
+          apt update
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git cmake autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev binutils libselinux1 python3-pip python3-pyelftools scons
+
+          # Build libusbgx static library
+          git clone https://github.com/linux-usb-gadgets/libusbgx.git /libusbgx
+          cd /libusbgx
+          git checkout 060784424609d5a4e3bce8355f788c93f09802a5
+          autoreconf -i
+          ./configure --enable-static --disable-shared
+          make
+          make install
+          # Ensure static .a is available
+          LIBUSBGX_A=/libusbgx/src/.libs/libusbgx.a
+          LIBUSBGX_INCLUDE=/libusbgx/include
+
+          # Build gc
+          cd /gc
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBUSBGX_STATIC=${LIBUSBGX_A} \
+            -DLIBUSBGX_INCLUDE_DIRS=${LIBUSBGX_INCLUDE} \
+            -DCMAKE_EXE_LINKER_FLAGS='-static'
+          make
+          mkdir -p /artifacts/bin
+          cp gc /artifacts/bin/
+        "
+
+    - name: Copy build artifacts from chroot
+      run: |
+        cp /opt/chroot/rootfs/artifacts/bin/gc .
+
+    - name: 🆙 Determine next version tag
+      id: version
+      run: |
+        git fetch --tags
+        latest=$(git tag | grep '^v[0-9]\+\.[0-9]\+\.[0-9]\+$' | sort -V | tail -n1)
+        if [ -z "$latest" ]; then
+          next="v1.0.0"
+        else
+          major=$(echo $latest | cut -d. -f1 | tr -d 'v')
+          minor=$(echo $latest | cut -d. -f2)
+          patch=$(echo $latest | cut -d. -f3)
+          next="v${major}.${minor}.$((patch + 1))"
+        fi
+        echo "VERSION_TAG=$next" >> $GITHUB_ENV
+        
+    - name: Upload Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: ./gc
+        tag: ${{ env.VERSION_TAG }}
+        name: ${{ env.VERSION_TAG }}
+        body: "✅ gc fully static armv7/armhf binary (libusbgx linked statically)"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
