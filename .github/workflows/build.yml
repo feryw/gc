@@ -1,4 +1,4 @@
-name: Build gc Static
+name: Build gc (static)
 
 on:
   repository_dispatch:
@@ -12,10 +12,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install host dependencies
+    - name: Install runner dependencies
       run: |
         sudo apt update
-        sudo apt install -y qemu-user-static binfmt-support curl xz-utils build-essential git cmake autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev binutils libselinux1 python3-pip python3-pyelftools scons
+        sudo apt install -y qemu-user-static binfmt-support jq curl xz-utils grep coreutils
 
     - name: Prepare container rootfs
       run: |
@@ -31,44 +31,42 @@ jobs:
           sudo mkdir -p /opt/chroot/rootfs/$dir
           sudo mount --bind /$dir /opt/chroot/rootfs/$dir
         done
+
+        echo "Copying qemu-arm-static into chroot..."
         sudo cp /usr/bin/qemu-arm-static /opt/chroot/rootfs/usr/bin/
-        sudo rm -f /opt/chroot/rootfs/etc/resolv.conf
+        sudo rm /opt/chroot/rootfs/etc/resolv.conf
+        sudo touch /opt/chroot/rootfs/etc/resolv.conf
         echo "nameserver 1.1.1.1" | sudo tee /opt/chroot/rootfs/etc/resolv.conf
         echo "nameserver 8.8.8.8" | sudo tee -a /opt/chroot/rootfs/etc/resolv.conf
+        
 
-    - name: Build gc statically with CMake
+    - name: Build gc
       run: |
         sudo chroot /opt/chroot/rootfs /bin/bash -c "
-          set -e
           apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git cmake autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev binutils libselinux1 python3-pip python3-pyelftools scons
-
-          # Build libusbgx static library
-          git clone https://github.com/linux-usb-gadgets/libusbgx.git /libusbgx
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev cmake binutils libselinux1 patchelf python3-pip python3-pyelftools scons
+          pip3 install staticx
+          git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
           git checkout 060784424609d5a4e3bce8355f788c93f09802a5
           autoreconf -i
-          ./configure --enable-static --disable-shared
+          ./configure
           make
-          make install
-          # Ensure static .a is available
           LIBUSBGX_A=/libusbgx/src/.libs/libusbgx.a
           LIBUSBGX_INCLUDE=/libusbgx/include
-
-          # Build gc
-          cd /gc
-          mkdir -p build
-          cd build
+          mkdir -p /artifacts 
+          mkdir -p /gc/build
+          cd /gc/build
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBUSBGX_STATIC=${LIBUSBGX_A} \
             -DLIBUSBGX_INCLUDE_DIRS=${LIBUSBGX_INCLUDE} \
             -DCMAKE_EXE_LINKER_FLAGS='-static'
           make
-          mkdir -p /artifacts/bin
-          cp gc /artifacts/bin/
+          cp /gc/bin/gc /artifacts
+          chmod 644 /artifacts/gc
         "
-
+          
     - name: Copy build artifacts from chroot
       run: |
         cp /opt/chroot/rootfs/artifacts/bin/gc .
@@ -94,6 +92,6 @@ jobs:
         artifacts: ./gc
         tag: ${{ env.VERSION_TAG }}
         name: ${{ env.VERSION_TAG }}
-        body: "✅ gc fully static armv7/armhf binary (libusbgx linked statically)"
+        body: "✅ gc static armv7/armhf binaries only"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
