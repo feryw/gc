@@ -1,4 +1,4 @@
-name: Build static gc
+name: Build gc (static)
 
 on:
   repository_dispatch:
@@ -20,7 +20,7 @@ jobs:
     - name: Prepare container rootfs
       run: |
         mkdir -p /opt/chroot
-        curl -L -o /opt/chroot/rootfs.tar.xz https://images.linuxcontainers.org/images/ubuntu/jammy/armhf/default/20250715_08:28/rootfs.tar.xz
+        curl -L -o /opt/chroot/rootfs.tar.xz https://images.linuxcontainers.org/images/ubuntu/jammy/armhf/default/20250925_07:42/rootfs.tar.xz
         mkdir -p /opt/chroot/rootfs
         sudo tar -xf /opt/chroot/rootfs.tar.xz -C /opt/chroot/rootfs
         rm /opt/chroot/rootfs.tar.xz
@@ -44,8 +44,7 @@ jobs:
       run: |
         sudo chroot /opt/chroot/rootfs /bin/bash -c "
           apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev cmake binutils libselinux1 patchelf python3-pip python3-pyelftools scons
-          pip3 install staticx
+          DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev cmake binutils libselinux1 scons
           git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
           git checkout 060784424609d5a4e3bce8355f788c93f09802a5
@@ -53,22 +52,24 @@ jobs:
           ./configure
           make
           make install
-          cp /usr/local/lib/libusbgx.so.2.0.0 /lib/arm-linux-gnueabihf
-          ln -sf /lib/arm-linux-gnueabihf/libusbgx.so.2.0.0 /lib/arm-linux-gnueabihf/libusbgx.so.2
-          ln -sf /lib/arm-linux-gnueabihf/libusbgx.so.2.0.0 /lib/arm-linux-gnueabihf/libusbgx.so
-          ldconfig
-          mkdir -p /artifacts/prebin /artifacts/bin /gc/build
+          LIBUSBGX_A=/libusbgx/src/.libs/libusbgx.a
+          LIBUSBGX_INCLUDE=/libusbgx/include
+          mkdir -p /artifacts 
+          mkdir -p /gc/build
           cd /gc/build
-          cmake ..
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBUSBGX_STATIC=${LIBUSBGX_A} \
+            -DLIBUSBGX_INCLUDE_DIRS=${LIBUSBGX_INCLUDE} \
+            -DCMAKE_EXE_LINKER_FLAGS='-static'
           make
-          cp /gc/bin/gc /artifacts/prebin 
-          staticx -l /lib/arm-linux-gnueabihf/libusbgx.so.2 --strip /artifacts/prebin/gc /artifacts/bin/gc
-          chmod 644 /artifacts/bin/gc
+          cp /gc/bin/gc /artifacts
+          chmod 644 /artifacts/gc
         "
           
     - name: Copy build artifacts from chroot
       run: |
-        cp /opt/chroot/rootfs/artifacts/bin/gc .
+        cp /opt/chroot/rootfs/artifacts/gc .
 
     - name: 🆙 Determine next version tag
       id: version
