@@ -1,4 +1,4 @@
-name: Build gc (static) latest 0.2.0 libusbgx
+name: Build gc (static)
 
 on:
   repository_dispatch:
@@ -45,7 +45,7 @@ jobs:
         sudo chroot /opt/chroot/rootfs /bin/bash -c "
           apt update
           DEBIAN_FRONTEND=noninteractive apt install -y build-essential git autoconf automake libtool pkg-config zlib1g-dev libssl-dev libconfig-dev cmake binutils libselinux1 scons
-          find /user -type f -name "libconfig.a"
+          find /usr -type f -name "libconfig.a"
           git clone https://github.com/linux-usb-gadgets/libusbgx.git libusbgx
           cd /libusbgx
           git checkout 2e374d50aa4d65274c89edd3655c45c3632d226a
