@@ -28,7 +28,7 @@ add_executable(gc ${SOURCES})
 target_include_directories(gc PRIVATE /tmp/sysroot/include ${PROJECT_SOURCE_DIR})
 target_link_libraries(gc PRIVATE
     /tmp/sysroot/lib/libusbgx.a
-    /tmp/sysroot/lib/libconfig.a
+   /usr/lib/arm-linux-gnueabihf/libconfig.a
 )
 
 install(FILES ${PROJECT_SOURCE_DIR}/bin/gc DESTINATION bin)
