@@ -50,7 +50,7 @@ jobs:
           cd /libusbgx
           git checkout 2e374d50aa4d65274c89edd3655c45c3632d226a
           autoreconf -i
-          ./configure
+          ./configure --enable-static --prefix=/tmp/sysroot
           make
           make install
           mkdir -p /artifacts 
@@ -58,6 +58,7 @@ jobs:
           cd /gc/build
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
             -DCMAKE_EXE_LINKER_FLAGS='-static'
           make
           cp /gc/bin/gc /artifacts
