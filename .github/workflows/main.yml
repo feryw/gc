@@ -26,12 +26,19 @@ jobs:
         run: |
           git clone https://github.com/hyperrealm/libconfig.git
           cd libconfig
-          ./autogen.sh || true
-          ./configure --host=arm-linux-gnueabihf --enable-static --disable-shared \
-            CC=arm-linux-gnueabihf-gcc
-          make -j$(nproc)
-          sudo make install DESTDIR=/tmp/sysroot
 
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=arm \
+            -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_PREFIX=/usr
+
+          make -j$(nproc)
+          make DESTDIR=/tmp/sysroot install
+          find /tmp/sysroot 
+          
       - name: Build libusbgx static
         run: |
           git clone https://github.com/libusbgx/libusbgx.git
