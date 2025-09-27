@@ -61,6 +61,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DCMAKE_EXE_LINKER_FLAGS='-static'
           make
+          file /gc/bin/gc
           cp /gc/bin/gc /artifacts
           chmod 644 /artifacts/gc
         "
